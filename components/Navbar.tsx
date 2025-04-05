@@ -12,7 +12,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <Link href="/" className="text-pink-600 text-xl font-bold">
-              {language === 'zh' ? '月经跟踪器' : 'Period Tracker'}
+              {language === 'zh' ? '月经跟踪器' : 'Pal Period'}
             </Link>
           </div>
           <div className="flex items-center gap-4">

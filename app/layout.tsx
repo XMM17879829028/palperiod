@@ -7,7 +7,7 @@ import { LanguageProvider } from './context/LanguageContext';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: '月经跟踪器',
+  title: 'PalPeriod',
   description: '追踪您的月经周期、症状和健康',
 };
 
