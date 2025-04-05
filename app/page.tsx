@@ -57,6 +57,7 @@ export default function Home() {
   const [showOvulation, setShowOvulation] = useState(true);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [ovulationDaysList, setOvulationDaysList] = useState<number[]>([]);
 
   // 从localStorage加载数据
   useEffect(() => {
@@ -314,84 +315,118 @@ export default function Home() {
     
     // 计算经期和排卵期日期
     if (lastPeriodDate) {
-      const periodDates = [];
-      const ovulationDates = [];
-      const lastPeriod = new Date(lastPeriodDate);
-      let nextPeriod = new Date(lastPeriod);
+      const periodDates = []; // 当前月份的经期日期
+      const ovulationDates = []; // 当前月份的排卵期日期
+      const ovulationDayDates = []; // 当前月份的排卵日日期
       
-      // 计算当前显示月份之前和之后的经期日期
-      let count = 0;
-      const maxCycles = 12; // 增加到12个周期，覆盖一整年
+      const lastPeriod = new Date(lastPeriodDate);
+      
+      // 计算所有周期数据
+      const allCycles = [];
+      let cycleStart = new Date(lastPeriod);
+      
+      // 计算过去和未来的多个周期，确保覆盖当前显示的月份
+      for (let i = 0; i < 24; i++) { // 增加到24个周期以确保覆盖更多月份
+        // 周期开始日期
+        const periodStartDate = new Date(cycleStart);
+        
+        // 该周期的结束日期 = 开始日期 + 经期长度
+        const periodEndDate = new Date(periodStartDate);
+        periodEndDate.setDate(periodEndDate.getDate() + periodLength - 1);
+        
+        // 下一个周期的开始日期
+        const nextPeriodStartDate = new Date(periodStartDate);
+        nextPeriodStartDate.setDate(nextPeriodStartDate.getDate() + cycleLength);
+        
+        // 当前周期的排卵日（下个周期前14天）
+        const ovulationDate = new Date(nextPeriodStartDate);
+        ovulationDate.setDate(ovulationDate.getDate() - 14);
+        
+        // 排卵期开始日期（排卵日前5天）
+        const ovulationStartDate = new Date(ovulationDate);
+        ovulationStartDate.setDate(ovulationStartDate.getDate() - 5);
+        
+        // 排卵期结束日期（排卵日后4天）
+        const ovulationEndDate = new Date(ovulationDate);
+        ovulationEndDate.setDate(ovulationEndDate.getDate() + 4);
+        
+        // 保存周期数据
+        allCycles.push({
+          periodStart: periodStartDate,
+          periodEnd: periodEndDate,
+          ovulationDate: ovulationDate,
+          ovulationStart: ovulationStartDate,
+          ovulationEnd: ovulationEndDate,
+          nextPeriodStart: nextPeriodStartDate
+        });
+        
+        // 设置下一个周期的开始日期
+        cycleStart = nextPeriodStartDate;
+      }
       
       // 当前日期
       const today = new Date();
       
-      // 计算需要显示的第一个周期
-      // 如果最后一次月经日期在当前月份之前，需要计算到当前月份的周期
-      if (lastPeriod.getFullYear() < currentViewMonth.getFullYear() || 
-          (lastPeriod.getFullYear() === currentViewMonth.getFullYear() && lastPeriod.getMonth() < currentViewMonth.getMonth())) {
-        let monthDiff = (currentViewMonth.getFullYear() - lastPeriod.getFullYear()) * 12 + (currentViewMonth.getMonth() - lastPeriod.getMonth());
-        let cyclesToSkip = Math.floor(monthDiff / (cycleLength / 30)); // 估算需要跳过的周期数
-        
-        // 调整nextPeriod到接近当前月份的周期
-        for (let i = 0; i < cyclesToSkip && i < maxCycles - 3; i++) {
-          nextPeriod.setDate(nextPeriod.getDate() + cycleLength);
-        }
+      // 找到下一个将来的周期（用于显示预测信息）
+      const nextFutureCycle = allCycles.find(cycle => cycle.periodStart > today);
+      if (nextFutureCycle) {
+        setNextPeriodStart(nextFutureCycle.periodStart);
+        setNextOvulationDay(nextFutureCycle.ovulationDate);
       }
       
-      // 向前计算12个周期的经期和排卵期
-      while (count < maxCycles) {
-        // 计算本次经期日期
-        for (let i = 0; i < periodLength; i++) {
-          const periodDay = new Date(nextPeriod);
-          periodDay.setDate(periodDay.getDate() + i);
-          
-          if (periodDay.getMonth() === currentViewMonth.getMonth() && 
-              periodDay.getFullYear() === currentViewMonth.getFullYear()) {
-            periodDates.push(periodDay.getDate());
-          }
-        }
-        
-        // 计算排卵日（下次经期前14天）
-        if (showOvulation) {
-          // 计算下次经期开始日期
-          const nextCyclePeriod = new Date(nextPeriod);
-          nextCyclePeriod.setDate(nextCyclePeriod.getDate() + cycleLength);
-          
-          // 排卵日是下次经期前14天
-          const ovulationDate = new Date(nextCyclePeriod);
-          ovulationDate.setDate(ovulationDate.getDate() - 14);
-          
-          // 排卵期是排卵日前5天和排卵日后4天（共10天）
-          for (let i = -5; i <= 4; i++) {
-            const fertileDay = new Date(ovulationDate);
-            fertileDay.setDate(fertileDay.getDate() + i);
-            
-            if (fertileDay.getMonth() === currentViewMonth.getMonth() && 
-                fertileDay.getFullYear() === currentViewMonth.getFullYear()) {
-              ovulationDates.push(fertileDay.getDate());
-            }
-          }
-          
-          // 保存下一次排卵日期（如果在将来）
-          if (count === 0 && ovulationDate > today) {
-            setNextOvulationDay(new Date(ovulationDate));
-          }
-        }
-        
-        // 添加周期天数，计算下次经期
-        nextPeriod.setDate(nextPeriod.getDate() + cycleLength);
-        
-        // 保存下次经期开始日期（如果在将来）
-        if (count === 0 && nextPeriod > today) {
-          setNextPeriodStart(new Date(nextPeriod));
-        }
-        
-        count++;
+      // 检查当前月份的每一天是否在周期范围内
+      // 获取当前月份的年和月
+      const currentYear = currentViewMonth.getFullYear();
+      const currentMonth = currentViewMonth.getMonth();
+      
+      // 计算当前月的时间范围
+      const monthStart = new Date(currentYear, currentMonth, 1);
+      const monthEnd = new Date(currentYear, currentMonth + 1, 0);
+      
+      // 将当前月份的每一天与所有周期数据进行比较
+      // 先计算当前月份内所有日期
+      const datesInMonth = [];
+      for (let d = 1; d <= monthEnd.getDate(); d++) {
+        datesInMonth.push(new Date(currentYear, currentMonth, d));
       }
+      
+      // 对每个日期进行判断
+      datesInMonth.forEach(date => {
+        const day = date.getDate();
+        
+        // 检查该日期是否在任何周期的经期内
+        const inPeriod = allCycles.some(cycle => 
+          date >= cycle.periodStart && date <= cycle.periodEnd
+        );
+        
+        if (inPeriod) {
+          periodDates.push(day);
+        }
+        
+        // 检查该日期是否在任何周期的排卵期内
+        const inOvulationPeriod = allCycles.some(cycle => 
+          date >= cycle.ovulationStart && date <= cycle.ovulationEnd
+        );
+        
+        if (inOvulationPeriod) {
+          ovulationDates.push(day);
+        }
+        
+        // 检查该日期是否是任何周期的排卵日
+        const isOvulationDay = allCycles.some(cycle => 
+          date.getFullYear() === cycle.ovulationDate.getFullYear() &&
+          date.getMonth() === cycle.ovulationDate.getMonth() &&
+          date.getDate() === cycle.ovulationDate.getDate()
+        );
+        
+        if (isOvulationDay) {
+          ovulationDayDates.push(day);
+        }
+      });
       
       setPeriodDays(periodDates);
       setOvulationDays(ovulationDates);
+      setOvulationDaysList(ovulationDayDates);
     }
   };
 
@@ -647,6 +682,79 @@ export default function Home() {
             <p className="text-xl text-gray-600">{t.subtitle}</p>
           </div>
 
+          {/* 周期设置 */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4 text-pink-600">{t.cycleSettings}</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t.lastPeriodDate}
+                </label>
+                <input 
+                  type="date" 
+                  className="input-field" 
+                  value={lastPeriodDate}
+                  onChange={handlePeriodDateChange}
+                  onBlur={handlePeriodDateBlur}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.averageCycleLength}
+                  </label>
+                  <div className="flex items-center">
+                    <input 
+                      type="number" 
+                      min="21" 
+                      max="35" 
+                      className="input-field w-20"
+                      value={cycleLength}
+                      onChange={handleCycleLengthChange}
+                    />
+                    <span className="ml-2">{t.days}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.averagePeriodLength}
+                  </label>
+                  <div className="flex items-center">
+                    <input 
+                      type="number" 
+                      min="2" 
+                      max="10" 
+                      className="input-field w-20"
+                      value={periodLength}
+                      onChange={handlePeriodLengthChange}
+                    />
+                    <span className="ml-2">{t.days}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {nextPeriodStart && (
+                <div className="p-4 bg-pink-50 rounded-lg">
+                  <p className="font-medium">{t.nextPeriod}</p>
+                  <p className="text-pink-700 text-lg">{formatDate(nextPeriodStart)}</p>
+                </div>
+              )}
+              
+              {showOvulation && nextOvulationDay && (
+                <div className="p-4 bg-purple-50 rounded-lg">
+                  <p className="font-medium">{t.nextOvulation}</p>
+                  <p className="text-purple-700 text-lg">{formatDate(nextOvulationDay)}</p>
+                  <p className="text-purple-600 text-xs mt-2">{t.ovulationRange}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* 日历组件 */}
           <div className="bg-white rounded-lg shadow-md p-6 mb-8">
             <div className="flex justify-between items-center mb-6">
@@ -702,11 +810,8 @@ export default function Home() {
                   // 检查是否是经期
                   const isPeriod = periodDays.includes(day.getDate());
                   
-                  // 检查是否是排卵日
-                  const isOvulationDay = showOvulation && nextOvulationDay && 
-                                       day.getDate() === nextOvulationDay.getDate() &&
-                                       day.getMonth() === nextOvulationDay.getMonth() &&
-                                       day.getFullYear() === nextOvulationDay.getFullYear();
+                  // 检查是否是排卵日 - 修改为使用ovulationDaysList
+                  const isOvulationDay = showOvulation && ovulationDaysList.includes(day.getDate());
                   
                   // 检查是否是排卵期（并且显示排卵期）
                   const isOvulation = showOvulation && ovulationDays.includes(day.getDate());
@@ -781,79 +886,6 @@ export default function Home() {
               >
                 {showOvulation ? t.hideOvulation : t.showOvulation}
               </button>
-            </div>
-          </div>
-
-          {/* 周期设置 */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4 text-pink-600">{t.cycleSettings}</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t.lastPeriodDate}
-                </label>
-                <input 
-                  type="date" 
-                  className="input-field" 
-                  value={lastPeriodDate}
-                  onChange={handlePeriodDateChange}
-                  onBlur={handlePeriodDateBlur}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.averageCycleLength}
-                  </label>
-                  <div className="flex items-center">
-                    <input 
-                      type="number" 
-                      min="21" 
-                      max="35" 
-                      className="input-field w-20"
-                      value={cycleLength}
-                      onChange={handleCycleLengthChange}
-                    />
-                    <span className="ml-2">{t.days}</span>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t.averagePeriodLength}
-                  </label>
-                  <div className="flex items-center">
-                    <input 
-                      type="number" 
-                      min="2" 
-                      max="10" 
-                      className="input-field w-20"
-                      value={periodLength}
-                      onChange={handlePeriodLengthChange}
-                    />
-                    <span className="ml-2">{t.days}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {nextPeriodStart && (
-                <div className="p-4 bg-pink-50 rounded-lg">
-                  <p className="font-medium">{t.nextPeriod}</p>
-                  <p className="text-pink-700 text-lg">{formatDate(nextPeriodStart)}</p>
-                </div>
-              )}
-              
-              {showOvulation && nextOvulationDay && (
-                <div className="p-4 bg-purple-50 rounded-lg">
-                  <p className="font-medium">{t.nextOvulation}</p>
-                  <p className="text-purple-700 text-lg">{formatDate(nextOvulationDay)}</p>
-                  <p className="text-purple-600 text-xs mt-2">{t.ovulationRange}</p>
-                </div>
-              )}
             </div>
           </div>
 
