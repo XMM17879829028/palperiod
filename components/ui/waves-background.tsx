@@ -159,9 +159,11 @@ export function Waves({
     ctxRef.current = canvas.getContext("2d")
 
     function setSize() {
-      boundingRef.current = container.getBoundingClientRect()
-      canvas.width = boundingRef.current.width
-      canvas.height = boundingRef.current.height
+      if (container && canvas) {
+        boundingRef.current = container.getBoundingClientRect()
+        canvas.width = boundingRef.current.width
+        canvas.height = boundingRef.current.height
+      }
     }
 
     function setLines() {
@@ -277,8 +279,10 @@ export function Waves({
       mouse.ly = mouse.y
       mouse.a = Math.atan2(dy, dx)
 
-      container.style.setProperty("--x", `${mouse.sx}px`)
-      container.style.setProperty("--y", `${mouse.sy}px`)
+      if (container) {
+        container.style.setProperty("--x", `${mouse.sx}px`)
+        container.style.setProperty("--y", `${mouse.sy}px`)
+      }
 
       movePoints(t)
       drawLines()
