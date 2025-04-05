@@ -327,28 +327,48 @@ export default function Home() {
       
       // 计算过去和未来的多个周期，确保覆盖当前显示的月份
       for (let i = 0; i < 24; i++) { // 增加到24个周期以确保覆盖更多月份
-        // 周期开始日期
-        const periodStartDate = new Date(cycleStart);
+        // 创建并设置当前周期的开始日期（确保使用整数日期）
+        const periodStartDate = new Date(
+          cycleStart.getFullYear(),
+          cycleStart.getMonth(),
+          cycleStart.getDate()
+        );
         
-        // 该周期的结束日期 = 开始日期 + 经期长度
-        const periodEndDate = new Date(periodStartDate);
-        periodEndDate.setDate(periodEndDate.getDate() + periodLength - 1);
+        // 计算当前周期的结束日期（开始日期 + 经期长度 - 1）
+        // 减1是因为经期长度包括开始日期
+        const periodEndDate = new Date(
+          periodStartDate.getFullYear(),
+          periodStartDate.getMonth(),
+          periodStartDate.getDate() + (periodLength - 1)
+        );
         
-        // 下一个周期的开始日期
-        const nextPeriodStartDate = new Date(periodStartDate);
-        nextPeriodStartDate.setDate(nextPeriodStartDate.getDate() + cycleLength);
+        // 计算下一个周期的开始日期（当前周期开始 + 整个周期长度）
+        const nextPeriodStartDate = new Date(
+          periodStartDate.getFullYear(),
+          periodStartDate.getMonth(),
+          periodStartDate.getDate() + cycleLength
+        );
         
-        // 当前周期的排卵日（下个周期前14天）
-        const ovulationDate = new Date(nextPeriodStartDate);
-        ovulationDate.setDate(ovulationDate.getDate() - 14);
+        // 计算当前周期的排卵日（下一个经期前14天）
+        const ovulationDate = new Date(
+          nextPeriodStartDate.getFullYear(),
+          nextPeriodStartDate.getMonth(),
+          nextPeriodStartDate.getDate() - 14
+        );
         
-        // 排卵期开始日期（排卵日前5天）
-        const ovulationStartDate = new Date(ovulationDate);
-        ovulationStartDate.setDate(ovulationStartDate.getDate() - 5);
+        // 计算排卵期开始（排卵日前5天）
+        const ovulationStartDate = new Date(
+          ovulationDate.getFullYear(),
+          ovulationDate.getMonth(),
+          ovulationDate.getDate() - 5
+        );
         
-        // 排卵期结束日期（排卵日后4天）
-        const ovulationEndDate = new Date(ovulationDate);
-        ovulationEndDate.setDate(ovulationEndDate.getDate() + 4);
+        // 计算排卵期结束（排卵日后4天）
+        const ovulationEndDate = new Date(
+          ovulationDate.getFullYear(),
+          ovulationDate.getMonth(),
+          ovulationDate.getDate() + 4
+        );
         
         // 保存周期数据
         allCycles.push({
@@ -361,17 +381,46 @@ export default function Home() {
         });
         
         // 设置下一个周期的开始日期
-        cycleStart = nextPeriodStartDate;
+        cycleStart = new Date(
+          nextPeriodStartDate.getFullYear(),
+          nextPeriodStartDate.getMonth(),
+          nextPeriodStartDate.getDate()
+        );
       }
       
       // 当前日期
       const today = new Date();
       
       // 找到下一个将来的周期（用于显示预测信息）
-      const nextFutureCycle = allCycles.find(cycle => cycle.periodStart > today);
-      if (nextFutureCycle) {
-        setNextPeriodStart(nextFutureCycle.periodStart);
-        setNextOvulationDay(nextFutureCycle.ovulationDate);
+      let nextFuturePeriodStart = null;
+      let nextFutureOvulationDay = null;
+      
+      // 遍历所有周期，找出当前日期之后的第一个排卵日和经期开始日
+      for (const cycle of allCycles) {
+        // 检查排卵日是否在今天之后且尚未找到下一个排卵日
+        if (cycle.ovulationDate > today && !nextFutureOvulationDay) {
+          nextFutureOvulationDay = cycle.ovulationDate;
+        }
+        
+        // 检查经期开始日是否在今天之后且尚未找到下一个经期开始日
+        if (cycle.periodStart > today && !nextFuturePeriodStart) {
+          nextFuturePeriodStart = cycle.periodStart;
+        }
+        
+        // 如果已经找到了下一个排卵日和下一个经期开始日，可以提前结束循环
+        if (nextFutureOvulationDay && nextFuturePeriodStart) {
+          break;
+        }
+      }
+      
+      // 设置状态
+      if (nextFuturePeriodStart) {
+        // 确保设置一个新的日期对象实例
+        setNextPeriodStart(new Date(nextFuturePeriodStart.getTime()));
+      }
+      if (nextFutureOvulationDay) {
+        // 确保设置一个新的日期对象实例
+        setNextOvulationDay(new Date(nextFutureOvulationDay.getTime()));
       }
       
       // 检查当前月份的每一天是否在周期范围内
@@ -395,29 +444,46 @@ export default function Home() {
         const day = date.getDate();
         
         // 检查该日期是否在任何周期的经期内
-        const inPeriod = allCycles.some(cycle => 
-          date >= cycle.periodStart && date <= cycle.periodEnd
-        );
+        const inPeriod = allCycles.some(cycle => {
+          // 比较年月日
+          // 创建仅包含年月日的日期对象进行比较
+          const dateToCheck = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+          const cycleStartDate = new Date(cycle.periodStart.getFullYear(), cycle.periodStart.getMonth(), cycle.periodStart.getDate());
+          const cycleEndDate = new Date(cycle.periodEnd.getFullYear(), cycle.periodEnd.getMonth(), cycle.periodEnd.getDate());
+          
+          // 检查日期是否在经期范围内 (>= 开始日期 且 <= 结束日期)
+          return dateToCheck >= cycleStartDate && dateToCheck <= cycleEndDate;
+        });
         
         if (inPeriod) {
           periodDates.push(day);
         }
         
         // 检查该日期是否在任何周期的排卵期内
-        const inOvulationPeriod = allCycles.some(cycle => 
-          date >= cycle.ovulationStart && date <= cycle.ovulationEnd
-        );
+        const inOvulationPeriod = allCycles.some(cycle => {
+          // 比较年月日
+          // 创建仅包含年月日的日期对象进行比较
+          const dateToCheck = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+          const ovStartDate = new Date(cycle.ovulationStart.getFullYear(), cycle.ovulationStart.getMonth(), cycle.ovulationStart.getDate());
+          const ovEndDate = new Date(cycle.ovulationEnd.getFullYear(), cycle.ovulationEnd.getMonth(), cycle.ovulationEnd.getDate());
+          
+          // 检查日期是否在排卵期范围内
+          return dateToCheck >= ovStartDate && dateToCheck <= ovEndDate;
+        });
         
         if (inOvulationPeriod) {
           ovulationDates.push(day);
         }
         
         // 检查该日期是否是任何周期的排卵日
-        const isOvulationDay = allCycles.some(cycle => 
-          date.getFullYear() === cycle.ovulationDate.getFullYear() &&
-          date.getMonth() === cycle.ovulationDate.getMonth() &&
-          date.getDate() === cycle.ovulationDate.getDate()
-        );
+        const isOvulationDay = allCycles.some(cycle => {
+          // 比较年月日
+          const dateToCheck = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+          const ovDayDate = new Date(cycle.ovulationDate.getFullYear(), cycle.ovulationDate.getMonth(), cycle.ovulationDate.getDate());
+          
+          // 检查是否是排卵日
+          return dateToCheck.getTime() === ovDayDate.getTime();
+        });
         
         if (isOvulationDay) {
           ovulationDayDates.push(day);
@@ -469,6 +535,8 @@ export default function Home() {
   const formatDate = (date: Date | null) => {
     if (!date) return '';
     
+    // 使用标准的日期格式化
+    // 确保月份和日期是两位数
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
