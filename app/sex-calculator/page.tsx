@@ -611,14 +611,14 @@ Mode Switching Logic:
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-b from-pink-50 to-white relative touch-auto">
+    <div className="flex flex-col min-h-screen relative touch-auto bg-transparent overflow-hidden">
       {errorMessage && (
         <ErrorModal 
           message={errorMessage} 
           onClose={() => setErrorMessage(null)} 
         />
       )}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 top-[-100px]">
         <Waves
           lineColor="rgba(255, 192, 203, 0.35)"
           backgroundColor="transparent"

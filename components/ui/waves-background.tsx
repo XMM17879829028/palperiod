@@ -352,6 +352,7 @@ export function Waves({
         pointerEvents: "none",
         touchAction: "auto",
         zIndex: 0,
+        height: "110vh",
       }}
     >
       <canvas
