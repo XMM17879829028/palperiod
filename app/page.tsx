@@ -593,7 +593,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-b from-pink-50 to-white relative">
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-pink-50 to-white relative touch-auto">
       {/* 添加错误模态框 */}
       {errorMessage && (
         <ErrorModal 
@@ -616,7 +616,7 @@ export default function Home() {
           yGap={36}
         />
       </div>
-      <div className="container mx-auto px-4 py-8 relative z-10 w-full overflow-y-auto">
+      <div className="container mx-auto px-4 py-8 relative z-10 w-full overflow-y-auto touch-auto">
         <div className="max-w-5xl mx-auto w-full">
           <div className="text-center mb-8">
             <div className="flex justify-end mb-4">

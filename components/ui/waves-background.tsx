@@ -297,7 +297,6 @@ export function Waves({
       updateMouse(e.pageX, e.pageY)
     }
     function onTouchMove(e: TouchEvent) {
-      e.preventDefault()
       const touch = e.touches[0]
       updateMouse(touch.clientX, touch.clientY)
     }
@@ -319,8 +318,8 @@ export function Waves({
     setLines()
     requestAnimationFrame(tick)
     window.addEventListener("resize", onResize)
-    window.addEventListener("mousemove", onMouseMove)
-    window.addEventListener("touchmove", onTouchMove, { passive: false })
+    window.addEventListener("mousemove", onMouseMove, { passive: true })
+    window.addEventListener("touchmove", onTouchMove, { passive: true })
 
     return () => {
       window.removeEventListener("resize", onResize)
@@ -351,7 +350,7 @@ export function Waves({
         inset: 0,
         overflow: "hidden",
         pointerEvents: "none",
-        touchAction: "none",
+        touchAction: "auto",
         zIndex: 0,
       }}
     >
@@ -361,6 +360,8 @@ export function Waves({
           display: "block",
           width: "100%",
           height: "100%",
+          pointerEvents: "none",
+          touchAction: "auto",
         }}
       />
     </div>

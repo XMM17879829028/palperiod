@@ -19,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" className="h-full">
       <head>
         {/* Google Analytics代码 */}
         <Script
@@ -35,27 +35,30 @@ export default function RootLayout({
             gtag('config', 'G-6FN6XMQHTF');
           `}
         </Script>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
       </head>
       <body className={cn(
-        "min-h-screen bg-background font-sans antialiased overflow-x-hidden",
+        "min-h-screen h-full w-full bg-background font-sans antialiased overflow-x-hidden",
         inter.className
       )}>
         <LanguageProvider>
           <CalendarProvider>
-            <Navbar />
-            <main className="relative min-h-screen overflow-y-auto">
-              {children}
-            </main>
-            <footer className="bg-gray-100 py-4 mt-10">
-              <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
-                <p>© 2023 PalPeriod - All rights reserved.</p>
-                <div className="flex justify-center gap-4 mt-2">
-                  <a href="/terms" className="hover:text-gray-700">Terms of Service</a>
-                  <a href="/privacy" className="hover:text-gray-700">Privacy Policy</a>
-                  <a href="/contact" className="hover:text-gray-700">Contact</a>
+            <div className="flex flex-col min-h-screen h-full overflow-auto">
+              <Navbar />
+              <main className="flex-1 relative overflow-y-auto">
+                {children}
+              </main>
+              <footer className="bg-gray-100 py-4 mt-10">
+                <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
+                  <p>© 2023 PalPeriod - All rights reserved.</p>
+                  <div className="flex justify-center gap-4 mt-2">
+                    <a href="/terms" className="hover:text-gray-700">Terms of Service</a>
+                    <a href="/privacy" className="hover:text-gray-700">Privacy Policy</a>
+                    <a href="/contact" className="hover:text-gray-700">Contact</a>
+                  </div>
                 </div>
-              </div>
-            </footer>
+              </footer>
+            </div>
           </CalendarProvider>
         </LanguageProvider>
       </body>

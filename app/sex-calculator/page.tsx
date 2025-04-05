@@ -611,7 +611,7 @@ Mode Switching Logic:
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-b from-pink-50 to-white relative">
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-pink-50 to-white relative touch-auto">
       {errorMessage && (
         <ErrorModal 
           message={errorMessage} 
@@ -633,7 +633,7 @@ Mode Switching Logic:
           yGap={36}
         />
       </div>
-      <div className="container mx-auto px-4 py-8 relative z-10 w-full overflow-y-auto">
+      <div className="container mx-auto px-4 py-8 relative z-10 w-full overflow-y-auto touch-auto">
         <h1 className="text-4xl font-bold text-center mb-8 text-gray-800">{t.title}</h1>
         
         {!hasPeriodData ? (
