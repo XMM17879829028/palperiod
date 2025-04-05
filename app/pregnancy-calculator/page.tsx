@@ -600,7 +600,7 @@ Special Scenarios
     today.setHours(0, 0, 0, 0);
     
     // 计算怀孕天数（从最后一次月经开始）
-    const pregnancyDays = Math.floor((today.getTime() - lastPeriod.getTime()) / (1000 * 60 * 60 * 24));
+    const pregnancyDays = Math.floor((today.getTime() - lastPeriod.getTime()) / (1000 * 60 * 60 * 24)) + 1; // 加1包含最后一次月经的第一天
     const pregnancyWeeks = Math.floor(pregnancyDays / 7);
     const remainingDays = pregnancyDays % 7;
 
