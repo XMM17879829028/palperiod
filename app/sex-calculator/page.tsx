@@ -706,6 +706,16 @@ Mode Switching Logic:
               </button>
             </div>
 
+            {/* 添加受孕几率提示标记 */}
+            <div className="flex justify-end mb-2">
+              <div className="bg-pink-50 px-3 py-1 rounded-full text-xs text-pink-600 flex items-center shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{language === 'zh' ? '百分比表示受孕几率' : 'Percentage shows conception probability'}</span>
+              </div>
+            </div>
+
             {/* 星期标题 - 在移动端显示简短形式 */}
             <div className="grid grid-cols-7 mb-4">
               {[t.sunday, t.monday, t.tuesday, t.wednesday, t.thursday, t.friday, t.saturday].map((day, index) => (

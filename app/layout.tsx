@@ -50,7 +50,7 @@ export default function RootLayout({
               </main>
               <footer className="bg-transparent py-4 mt-10">
                 <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
-                  <p>© 2023 PalPeriod - All rights reserved.</p>
+                  <p>© 2025 PalPeriod - All rights reserved.</p>
                   <div className="flex justify-center gap-4 mt-2">
                     <a href="/terms" className="hover:text-gray-700">Terms of Service</a>
                     <a href="/privacy" className="hover:text-gray-700">Privacy Policy</a>
