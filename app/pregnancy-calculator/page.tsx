@@ -1066,22 +1066,22 @@ Special Scenarios
 
             {pregnancyInfo && (
               <div className="mt-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="bg-pink-50 rounded-lg p-4">
                     <p className="font-medium text-gray-600">
                       {language === 'zh' ? '怀孕周期' : 'Pregnancy Progress'}
                     </p>
-                    <p className="text-2xl font-bold text-pink-600">
+                    <p className="text-xl sm:text-2xl font-bold text-pink-600">
                       {formatWeeks(pregnancyInfo.weeks, pregnancyInfo.days)}
                     </p>
                   </div>
                   <div className="bg-pink-50 rounded-lg p-4">
                     <p className="font-medium text-gray-600">{t.stage}</p>
-                    <p className="text-2xl font-bold text-pink-600">{pregnancyInfo.stage}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-pink-600">{pregnancyInfo.stage}</p>
                   </div>
                   <div className="bg-pink-50 rounded-lg p-4">
                     <p className="font-medium text-gray-600">{t.dueDate}</p>
-                    <p className="text-2xl font-bold text-pink-600">{pregnancyInfo.dueDate}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-pink-600">{pregnancyInfo.dueDate}</p>
                   </div>
                   {pregnancyInfo.nextCheckup && (
                     <div className="bg-purple-50 rounded-lg p-4">
@@ -1142,15 +1142,15 @@ Special Scenarios
               </div>
 
               {/* 日历标题和导航 */}
-              <div className="flex items-center justify-between mb-4">
-                <button onClick={prevMonth} className="p-2 hover:bg-pink-50 rounded-full transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="flex flex-wrap items-center justify-between mb-4 gap-2">
+                <button onClick={prevMonth} className="p-3 hover:bg-pink-50 rounded-full transition-colors touch-auto">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
                 
                 <div className="flex items-center">
-                  <h2 className="text-xl font-semibold text-pink-600">
+                  <h2 className="text-lg sm:text-xl font-semibold text-pink-600">
                     {currentViewMonth.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', { 
                       year: 'numeric', 
                       month: 'long'
@@ -1159,7 +1159,7 @@ Special Scenarios
                   {/* 添加回到今天按钮 */}
                   <button 
                     onClick={resetToCurrentMonth} 
-                    className="ml-2 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-600 text-sm flex items-center"
+                    className="ml-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-gray-600 text-sm flex items-center touch-auto"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -1168,33 +1168,31 @@ Special Scenarios
                   </button>
                 </div>
                 
-                <div className="flex items-center gap-4">
-                  {/* 图例 */}
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 rounded-full bg-blue-100 border border-blue-300"></span>
-                      <span>{t.milestones.checkup}</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 rounded-full bg-green-100 border border-green-300"></span>
-                      <span>{t.milestones.development}</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 rounded-full bg-orange-100 border border-orange-300"></span>
-                      <span>{t.milestones.health}</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 rounded-full bg-red-100 border border-red-300"></span>
-                      <span>{t.milestones.warning}</span>
-                    </span>
-                  </div>
-                  
-                  <button onClick={nextMonth} className="p-2 hover:bg-pink-50 rounded-full transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
+                <button onClick={nextMonth} className="p-3 hover:bg-pink-50 rounded-full transition-colors touch-auto">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* 图例 - 移动到日历下方，在移动端更易于查看 */}
+              <div className="flex flex-wrap justify-center gap-3 mb-4 mt-2 text-xs">
+                <span className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm">
+                  <span className="w-3 h-3 rounded-full bg-blue-100 border border-blue-300"></span>
+                  <span>{t.milestones.checkup}</span>
+                </span>
+                <span className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm">
+                  <span className="w-3 h-3 rounded-full bg-green-100 border border-green-300"></span>
+                  <span>{t.milestones.development}</span>
+                </span>
+                <span className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm">
+                  <span className="w-3 h-3 rounded-full bg-orange-100 border border-orange-300"></span>
+                  <span>{t.milestones.health}</span>
+                </span>
+                <span className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm">
+                  <span className="w-3 h-3 rounded-full bg-red-100 border border-red-300"></span>
+                  <span>{t.milestones.warning}</span>
+                </span>
               </div>
 
               {/* 日历网格 */}

@@ -645,9 +645,9 @@ Mode Switching Logic:
             </Link>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-4xl mx-auto">
-            {/* 月份导航 */}
-            <div className="flex justify-between items-center mb-8">
+          <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-8 max-w-4xl mx-auto">
+            {/* 月份导航 - 优化移动端布局 */}
+            <div className="flex flex-wrap justify-between items-center mb-6 gap-2">
               <button 
                 onClick={() => {
                   const newDate = new Date(currentViewMonth);
@@ -661,12 +661,13 @@ Mode Switching Logic:
                   }
                   setCurrentViewMonth(newDate);
                 }}
-                className="w-10 h-10 flex items-center justify-center hover:bg-pink-50 rounded-full transition-colors text-gray-600 hover:text-pink-500"
+                className="w-12 h-12 flex items-center justify-center hover:bg-pink-50 rounded-full transition-colors text-gray-600 hover:text-pink-500 touch-auto"
+                aria-label="Previous month"
               >
                 ←
               </button>
               <div className="flex items-center">
-                <h2 className="text-2xl font-semibold text-gray-800">
+                <h2 className="text-lg sm:text-2xl font-semibold text-gray-800">
                   {currentViewMonth.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', {
                     year: 'numeric',
                     month: 'long'
@@ -675,12 +676,14 @@ Mode Switching Logic:
                 {/* 添加回到今天按钮 */}
                 <button 
                   onClick={resetToCurrentMonth}
-                  className="ml-2 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-600 text-sm flex items-center"
+                  className="ml-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-gray-600 text-sm flex items-center touch-auto"
+                  aria-label="Back to today"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  {language === 'zh' ? '返回今天' : 'Back to Today'}
+                  <span className="hidden sm:inline">{language === 'zh' ? '返回今天' : 'Back to Today'}</span>
+                  <span className="sm:hidden">{language === 'zh' ? '今天' : 'Today'}</span>
                 </button>
               </div>
               <button 
@@ -696,23 +699,25 @@ Mode Switching Logic:
                   }
                   setCurrentViewMonth(newDate);
                 }}
-                className="w-10 h-10 flex items-center justify-center hover:bg-pink-50 rounded-full transition-colors text-gray-600 hover:text-pink-500"
+                className="w-12 h-12 flex items-center justify-center hover:bg-pink-50 rounded-full transition-colors text-gray-600 hover:text-pink-500 touch-auto"
+                aria-label="Next month"
               >
                 →
               </button>
             </div>
 
-            {/* 星期标题 */}
+            {/* 星期标题 - 在移动端显示简短形式 */}
             <div className="grid grid-cols-7 mb-4">
               {[t.sunday, t.monday, t.tuesday, t.wednesday, t.thursday, t.friday, t.saturday].map((day, index) => (
                 <div key={index} className="text-center py-2 text-gray-500 font-medium">
-                  {day}
+                  <span className="hidden sm:inline">{day}</span>
+                  <span className="sm:hidden">{day.charAt(0)}</span>
                 </div>
               ))}
             </div>
 
-            {/* 日历格子 */}
-            <div className="grid grid-cols-7 gap-2">
+            {/* 日历格子 - 增大触摸区域 */}
+            <div className="grid grid-cols-7 gap-1 sm:gap-2">
               {generateCalendarDays().map((day, index) => {
                 const isSelected = hasRecord(day.date);
                 const probability = calculateProbability(day.date);
@@ -722,42 +727,55 @@ Mode Switching Logic:
                     key={index}
                     onClick={() => handleDateClick(day.date)}
                     className={`
-                      relative aspect-square p-2 cursor-pointer rounded-xl
+                      relative aspect-square p-1 sm:p-2 cursor-pointer rounded-xl
                       flex flex-col items-center justify-center gap-1
                       ${day.isCurrentMonth ? 'hover:bg-pink-50' : 'text-gray-400 hover:bg-gray-50'}
                       ${isSelected ? 'bg-pink-100 shadow-sm' : ''}
-                      transition-all duration-200
+                      transition-all duration-200 touch-auto
                     `}
                   >
                     <span className={`text-sm font-medium ${isSelected ? 'text-pink-700' : ''}`}>
                       {day.date.getDate()}
                     </span>
                     
-                    {/* 爱心标记 */}
+                    {/* 爱心标记 - 根据屏幕大小调整大小 */}
                     {isSelected && (
-                      <div className="relative w-6 h-6">
+                      <div className="relative w-4 h-4 sm:w-6 sm:h-6">
                         <div className="absolute inset-0 bg-pink-200 rounded-full transform rotate-45"></div>
                         <div className="absolute inset-0 bg-white rounded-full transform -rotate-45 scale-75"></div>
                       </div>
                     )}
                     
-                    {/* 受孕概率 */}
+                    {/* 受孕概率 - 精简显示 */}
                     {isSelected && probability > 0 && (
-                      <div className="text-xs text-pink-600 font-medium mt-1">
-                        {language === 'zh' ? `受孕率: ${probability}%` : `Fertility: ${probability}%`}
+                      <div className="text-xs text-pink-600 font-medium mt-1 whitespace-nowrap">
+                        {language === 'zh' ? `${probability}%` : `${probability}%`}
                       </div>
                     )}
                   </div>
                 );
               })}
             </div>
+
+            {/* 添加图例说明 */}
+            <div className="mt-4 flex justify-center">
+              <div className="bg-white px-3 py-2 rounded-lg shadow-sm text-xs flex items-center gap-2">
+                <div className="flex items-center">
+                  <div className="relative w-4 h-4 mr-1">
+                    <div className="absolute inset-0 bg-pink-200 rounded-full transform rotate-45"></div>
+                    <div className="absolute inset-0 bg-white rounded-full transform -rotate-45 scale-75"></div>
+                  </div>
+                  <span>{language === 'zh' ? '同房记录' : 'Intimacy Record'}</span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* 知识库 */}
-        <div className="container mx-auto px-4 pb-8 relative z-10">
+        {/* 知识库 - 优化移动端显示 */}
+        <div className="container mx-auto px-0 sm:px-4 pb-8 relative z-10 mt-8">
           <div className="max-w-4xl mx-auto w-full">
-            <h2 className="text-2xl font-bold mb-4 text-gray-800">{t.articles.title}</h2>
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 text-gray-800 px-4">{t.articles.title}</h2>
             <div className="space-y-4">
               {t.articles.items.map((article, index) => (
                 <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -766,21 +784,21 @@ Mode Switching Logic:
                       ...prev,
                       [article.id]: !prev[article.id]
                     }))}
-                    className="w-full px-6 py-4 flex justify-between items-center hover:bg-gray-50"
+                    className="w-full px-4 sm:px-6 py-4 flex justify-between items-center hover:bg-gray-50 touch-auto"
                   >
-                    <h3 className="text-lg font-semibold text-gray-800">{article.title}</h3>
-                    <span className="text-gray-500">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-800">{article.title}</h3>
+                    <span className="text-gray-500 text-lg">
                       {expandedArticles[article.id] ? '↑' : '↓'}
                     </span>
                   </button>
                   {expandedArticles[article.id] && (
-                    <div className="px-6 py-4">
+                    <div className="px-4 sm:px-6 py-4">
                       <div className="prose prose-sm max-w-none text-gray-600">
                         {article.content.split('\n\n').map((section, i) => {
                           if (section.startsWith('|')) {
                             const rows = section.split('\n').filter(row => row.trim() !== '');
                             return (
-                              <div key={i} className="my-4 overflow-x-auto">
+                              <div key={i} className="my-4 overflow-x-auto -mx-4 sm:mx-0">
                                 <table className="min-w-full border border-gray-200 rounded-lg">
                                   <tbody>
                                     {rows.map((row, rowIndex) => {
