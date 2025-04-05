@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import Link from 'next/link';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage, useCalendar } from '../context/LanguageContext';
 import { Waves } from '../../components/ui/waves-background';
 
 interface SexRecord {
@@ -19,6 +19,10 @@ interface PeriodData {
   ovulationDay?: number;
   ovulationStart?: number;
   ovulationEnd?: number;
+  futureCycles: {
+    periodStart: string;
+    ovulationDate: string;
+  }[];
 }
 
 interface Translations {
@@ -65,14 +69,15 @@ interface Translations {
 }
 
 export default function SexCalendar() {
-  const { language } = useLanguage();
+  const { language, setLanguage } = useLanguage();
+  const { currentViewMonth, setCurrentViewMonth } = useCalendar();
   const [records, setRecords] = useState<SexRecord[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [note, setNote] = useState('');
-  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [periodData, setPeriodData] = useState<PeriodData | null>(null);
   const [hasPeriodData, setHasPeriodData] = useState(false);
   const [expandedArticles, setExpandedArticles] = useState<Record<string, boolean>>({});
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const translations: { en: Translations; zh: Translations } = {
     en: {
@@ -255,6 +260,11 @@ Mode Switching Logic:
         const data = JSON.parse(storedPeriodData);
         setPeriodData(data);
         setHasPeriodData(true);
+        
+        // 查看是否包含未来周期数据
+        if (data.futureCycles && data.futureCycles.length > 0) {
+          console.log(`加载了${data.futureCycles.length}个未来周期数据`);
+        }
       } catch (error) {
         console.error('Error parsing period data:', error);
         setHasPeriodData(false);
@@ -305,20 +315,87 @@ Mode Switching Logic:
 
     // 创建日期对象并设置为当天的开始时间（0时0分0秒）
     const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    
+    // 如果有未来周期数据，使用它来获取更精确的概率
+    if (periodData.futureCycles && periodData.futureCycles.length > 0) {
+      // 找到目标日期所在的周期
+      for (let i = 0; i < periodData.futureCycles.length; i++) {
+        const cycle = periodData.futureCycles[i];
+        const periodStart = new Date(cycle.periodStart);
+        let nextPeriodStart = null;
+        
+        // 获取下一个周期的开始日期（如果有）
+        if (i < periodData.futureCycles.length - 1) {
+          nextPeriodStart = new Date(periodData.futureCycles[i + 1].periodStart);
+        } else {
+          // 如果是最后一个周期，估算下一个周期开始日期
+          nextPeriodStart = new Date(periodStart);
+          nextPeriodStart.setDate(nextPeriodStart.getDate() + periodData.cycleLength);
+        }
+        
+        // 检查目标日期是否在当前周期内
+        if (targetDate >= periodStart && targetDate < nextPeriodStart) {
+          // 获取排卵日
+          const ovulationDate = new Date(cycle.ovulationDate);
+          
+          // 计算目标日期与排卵日的天数差
+          const daysFromOvulation = Math.floor((targetDate.getTime() - ovulationDate.getTime()) / (1000 * 60 * 60 * 24));
+          
+          // 经期期间（前5天）
+          const daysSinceLastPeriod = Math.floor((targetDate.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24));
+          if (daysSinceLastPeriod >= 0 && daysSinceLastPeriod < periodData.periodLength) {
+            return 3;
+          }
+
+          // 排卵期概率（排卵日前5天到后4天）
+          if (daysFromOvulation >= -5 && daysFromOvulation <= 4) {
+            // 排卵日前5天到排卵日
+            if (daysFromOvulation <= 0) {
+              const probabilities = [38, 48, 62, 66, 69, 71];  // 从排卵日前5天到排卵日
+              return probabilities[daysFromOvulation + 5];
+            }
+            // 排卵日后1-4天
+            else {
+              const probabilities = [57, 43, 36, 26];  // 排卵日后1-4天
+              return probabilities[daysFromOvulation - 1];
+            }
+          }
+
+          // 临近排卵期的安全期
+          if (daysFromOvulation === -7) return 20;  // 排卵日前两天
+          if (daysFromOvulation === -6) return 24;  // 排卵日前一天
+
+          // 排卵期结束后的安全期
+          if (daysFromOvulation === 5) return 21;   // 排卵期结束后第一天
+          if (daysFromOvulation === 6) return 17;   // 排卵期结束后第二天
+          if (daysFromOvulation === 7) return 14;   // 排卵期结束后第三天
+          
+          // 其余安全期
+          return 5;
+        }
+      }
+    }
+    
+    // 如果没有找到匹配的周期或没有未来周期数据，使用传统计算方法
     const lastPeriod = new Date(periodData.lastPeriodDate + 'T00:00:00');
     
-    // 计算排卵日（当前经期开始后的第14天）
-    const ovulationDate = new Date(lastPeriod.getFullYear(), lastPeriod.getMonth(), lastPeriod.getDate() + 14);
-
-    // 计算日期与排卵日的天数差
-    const daysFromOvulation = Math.floor((targetDate.getTime() - ovulationDate.getTime()) / (1000 * 60 * 60 * 24));
-
-    // 经期期间（前5天）
+    // 计算日期与最后一次经期开始日期的天数差
     const daysSinceLastPeriod = Math.floor((targetDate.getTime() - lastPeriod.getTime()) / (1000 * 60 * 60 * 24));
-    if (daysSinceLastPeriod >= 0 && daysSinceLastPeriod < periodData.periodLength) {
+    
+    // 计算在周期中的哪一天（例如，第1天、第15天等）
+    const dayInCycle = (daysSinceLastPeriod % periodData.cycleLength + periodData.cycleLength) % periodData.cycleLength;
+    
+    // 经期期间
+    if (dayInCycle < periodData.periodLength) {
       return 3;
     }
-
+    
+    // 计算排卵日（周期长度减去14天）
+    const ovulationDay = periodData.cycleLength - 14;
+    
+    // 计算与排卵日的天数差
+    const daysFromOvulation = dayInCycle - ovulationDay;
+    
     // 排卵期概率（排卵日前5天到后4天）
     if (daysFromOvulation >= -5 && daysFromOvulation <= 4) {
       // 排卵日前5天到排卵日
@@ -358,15 +435,15 @@ Mode Switching Logic:
 
   // 生成日历数据
   const generateCalendarDays = () => {
-    const daysInMonth = getDaysInMonth(currentMonth);
-    const firstDay = getFirstDayOfMonth(currentMonth);
+    const daysInMonth = getDaysInMonth(currentViewMonth);
+    const firstDay = getFirstDayOfMonth(currentViewMonth);
     const days = [];
 
     // 添加上个月的日期
-    const prevMonthDays = getDaysInMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
+    const prevMonthDays = getDaysInMonth(new Date(currentViewMonth.getFullYear(), currentViewMonth.getMonth() - 1));
     for (let i = firstDay - 1; i >= 0; i--) {
       days.push({
-        date: new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, prevMonthDays - i),
+        date: new Date(currentViewMonth.getFullYear(), currentViewMonth.getMonth() - 1, prevMonthDays - i),
         isCurrentMonth: false
       });
     }
@@ -374,7 +451,7 @@ Mode Switching Logic:
     // 添加当前月的日期
     for (let i = 1; i <= daysInMonth; i++) {
       days.push({
-        date: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i),
+        date: new Date(currentViewMonth.getFullYear(), currentViewMonth.getMonth(), i),
         isCurrentMonth: true
       });
     }
@@ -383,7 +460,7 @@ Mode Switching Logic:
     const remainingDays = 42 - days.length; // 6行7列 = 42
     for (let i = 1; i <= remainingDays; i++) {
       days.push({
-        date: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, i),
+        date: new Date(currentViewMonth.getFullYear(), currentViewMonth.getMonth() + 1, i),
         isCurrentMonth: false
       });
     }
@@ -504,8 +581,43 @@ Mode Switching Logic:
   const calendarDays = generateCalendarDays();
   const weekDays = [t.monday, t.tuesday, t.wednesday, t.thursday, t.friday, t.saturday, t.sunday];
 
+  // 错误模态框组件
+  const ErrorModal = ({ message, onClose }: { message: string; onClose: () => void }) => {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 mx-4">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">{message}</h3>
+            <button
+              onClick={onClose}
+              className="bg-pink-500 hover:bg-pink-600 text-white py-2 px-4 rounded-lg"
+            >
+              {language === 'zh' ? '确定' : 'OK'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // 回到今天按钮的处理函数
+  const resetToCurrentMonth = () => {
+    setCurrentViewMonth(new Date());
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-pink-50 to-white relative">
+      {errorMessage && (
+        <ErrorModal 
+          message={errorMessage} 
+          onClose={() => setErrorMessage(null)} 
+        />
+      )}
       <div className="absolute inset-0 z-0">
         <Waves
           lineColor="rgba(255, 192, 203, 0.35)"
@@ -521,7 +633,7 @@ Mode Switching Logic:
           yGap={36}
         />
       </div>
-      <div className="container mx-auto px-4 py-8 relative z-10">
+      <div className="container mx-auto px-4 py-8 relative z-10 w-full overflow-y-auto">
         <h1 className="text-4xl font-bold text-center mb-8 text-gray-800">{t.title}</h1>
         
         {!hasPeriodData ? (
@@ -538,25 +650,51 @@ Mode Switching Logic:
             <div className="flex justify-between items-center mb-8">
               <button 
                 onClick={() => {
-                  const newDate = new Date(currentMonth);
+                  const newDate = new Date(currentViewMonth);
                   newDate.setMonth(newDate.getMonth() - 1);
-                  setCurrentMonth(newDate);
+                  // 检查年份下限
+                  if (newDate.getFullYear() < 1950) {
+                    setErrorMessage(language === 'zh' ? 
+                      '已达到最早年份限制 (1950)' : 
+                      'Reached the earliest year limit (1950)');
+                    return;
+                  }
+                  setCurrentViewMonth(newDate);
                 }}
                 className="w-10 h-10 flex items-center justify-center hover:bg-pink-50 rounded-full transition-colors text-gray-600 hover:text-pink-500"
               >
                 ←
               </button>
-              <h2 className="text-2xl font-semibold text-gray-800">
-                {currentMonth.toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US', { 
-                  year: 'numeric',
-                  month: 'long'
-                })}
-              </h2>
+              <div className="flex items-center">
+                <h2 className="text-2xl font-semibold text-gray-800">
+                  {currentViewMonth.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', {
+                    year: 'numeric',
+                    month: 'long'
+                  })}
+                </h2>
+                {/* 添加回到今天按钮 */}
+                <button 
+                  onClick={resetToCurrentMonth}
+                  className="ml-2 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-600 text-sm flex items-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  {language === 'zh' ? '返回今天' : 'Back to Today'}
+                </button>
+              </div>
               <button 
                 onClick={() => {
-                  const newDate = new Date(currentMonth);
+                  const newDate = new Date(currentViewMonth);
                   newDate.setMonth(newDate.getMonth() + 1);
-                  setCurrentMonth(newDate);
+                  // 检查年份上限
+                  if (newDate.getFullYear() > 3000) {
+                    setErrorMessage(language === 'zh' ? 
+                      '已达到最晚年份限制 (3000)' : 
+                      'Reached the latest year limit (3000)');
+                    return;
+                  }
+                  setCurrentViewMonth(newDate);
                 }}
                 className="w-10 h-10 flex items-center justify-center hover:bg-pink-50 rounded-full transition-colors text-gray-600 hover:text-pink-500"
               >

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLanguage } from './context/LanguageContext';
+import { useLanguage, useCalendar } from './context/LanguageContext';
 import { Waves } from '../components/ui/waves-background';
 
 interface ContentBlock {
@@ -45,11 +45,10 @@ interface Translations {
 
 export default function Home() {
   const { language, setLanguage } = useLanguage();
+  const { currentViewMonth, setCurrentViewMonth } = useCalendar();
   const [cycleLength, setCycleLength] = useState(28);
   const [periodLength, setPeriodLength] = useState(5);
   const [lastPeriodDate, setLastPeriodDate] = useState('');
-  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [calendarDays, setCalendarDays] = useState<(Date | null)[]>([]);
   const [periodDays, setPeriodDays] = useState<number[]>([]);
   const [ovulationDays, setOvulationDays] = useState<number[]>([]);
@@ -57,6 +56,7 @@ export default function Home() {
   const [nextOvulationDay, setNextOvulationDay] = useState<Date | null>(null);
   const [showOvulation, setShowOvulation] = useState(true);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // 从localStorage加载数据
   useEffect(() => {
@@ -64,6 +64,19 @@ export default function Home() {
     if (storedPeriodData) {
       try {
         const data = JSON.parse(storedPeriodData);
+        
+        // 验证日期是否在有效范围内
+        if (data.lastPeriodDate) {
+          const date = new Date(data.lastPeriodDate);
+          const year = date.getFullYear();
+          
+          if (year < 1950 || year > 3000) {
+            // 如果日期无效，清除localStorage数据并返回
+            localStorage.removeItem('periodData');
+            return;
+          }
+        }
+        
         setLastPeriodDate(data.lastPeriodDate);
         setCycleLength(data.cycleLength);
         setPeriodLength(data.periodLength);
@@ -79,6 +92,8 @@ export default function Home() {
         setNextOvulationDay(ovulationDate);
       } catch (error) {
         console.error('Error loading period data:', error);
+        // 出错时清除localStorage数据
+        localStorage.removeItem('periodData');
       }
     }
   }, []);
@@ -99,7 +114,7 @@ export default function Home() {
     en: {
       title: 'Period Calculator',
       subtitle: 'Track your menstrual cycle and understand your body better',
-      today: 'Today',
+      today: 'Back to Today',
       period: 'Period',
       ovulationDay: 'Ovulation Day',
       ovulationPeriod: 'Fertile Window',
@@ -174,9 +189,9 @@ export default function Home() {
       tip: 'Stay positive for conception, choose reliable contraception, and honor your body during menstruation—you\'re the CEO of your health!'
     },
     zh: {
-      title: '经期计算器',
+      title: '经期日历计算器',
       subtitle: '追踪您的月经周期，更好地了解您的身体',
-      today: '今天',
+      today: '返回今天',
       period: '经期',
       ovulationDay: '排卵日',
       ovulationPeriod: '排卵期',
@@ -274,12 +289,12 @@ export default function Home() {
 
   useEffect(() => {
     generateCalendar();
-  }, [currentMonth, currentYear, lastPeriodDate, cycleLength, periodLength, showOvulation]);
+  }, [currentViewMonth, lastPeriodDate, cycleLength, periodLength, showOvulation]);
 
   const generateCalendar = () => {
     const days = [];
-    const firstDay = new Date(currentYear, currentMonth, 1);
-    const lastDay = new Date(currentYear, currentMonth + 1, 0);
+    const firstDay = new Date(currentViewMonth.getFullYear(), currentViewMonth.getMonth(), 1);
+    const lastDay = new Date(currentViewMonth.getFullYear(), currentViewMonth.getMonth() + 1, 0);
     
     // 获取当月第一天是星期几 (0-6)
     let dayOfWeek = firstDay.getDay();
@@ -292,7 +307,7 @@ export default function Home() {
     
     // 填充月份日期
     for (let i = 1; i <= lastDay.getDate(); i++) {
-      days.push(new Date(currentYear, currentMonth, i));
+      days.push(new Date(currentViewMonth.getFullYear(), currentViewMonth.getMonth(), i));
     }
     
     setCalendarDays(days);
@@ -306,16 +321,33 @@ export default function Home() {
       
       // 计算当前显示月份之前和之后的经期日期
       let count = 0;
-      const maxCycles = 6; // 最多计算6个周期
+      const maxCycles = 12; // 增加到12个周期，覆盖一整年
       
+      // 当前日期
+      const today = new Date();
+      
+      // 计算需要显示的第一个周期
+      // 如果最后一次月经日期在当前月份之前，需要计算到当前月份的周期
+      if (lastPeriod.getFullYear() < currentViewMonth.getFullYear() || 
+          (lastPeriod.getFullYear() === currentViewMonth.getFullYear() && lastPeriod.getMonth() < currentViewMonth.getMonth())) {
+        let monthDiff = (currentViewMonth.getFullYear() - lastPeriod.getFullYear()) * 12 + (currentViewMonth.getMonth() - lastPeriod.getMonth());
+        let cyclesToSkip = Math.floor(monthDiff / (cycleLength / 30)); // 估算需要跳过的周期数
+        
+        // 调整nextPeriod到接近当前月份的周期
+        for (let i = 0; i < cyclesToSkip && i < maxCycles - 3; i++) {
+          nextPeriod.setDate(nextPeriod.getDate() + cycleLength);
+        }
+      }
+      
+      // 向前计算12个周期的经期和排卵期
       while (count < maxCycles) {
         // 计算本次经期日期
         for (let i = 0; i < periodLength; i++) {
           const periodDay = new Date(nextPeriod);
           periodDay.setDate(periodDay.getDate() + i);
           
-          if (periodDay.getMonth() === currentMonth && 
-              periodDay.getFullYear() === currentYear) {
+          if (periodDay.getMonth() === currentViewMonth.getMonth() && 
+              periodDay.getFullYear() === currentViewMonth.getFullYear()) {
             periodDates.push(periodDay.getDate());
           }
         }
@@ -335,14 +367,14 @@ export default function Home() {
             const fertileDay = new Date(ovulationDate);
             fertileDay.setDate(fertileDay.getDate() + i);
             
-            if (fertileDay.getMonth() === currentMonth && 
-                fertileDay.getFullYear() === currentYear) {
+            if (fertileDay.getMonth() === currentViewMonth.getMonth() && 
+                fertileDay.getFullYear() === currentViewMonth.getFullYear()) {
               ovulationDates.push(fertileDay.getDate());
             }
           }
           
           // 保存下一次排卵日期（如果在将来）
-          if (count === 0 && ovulationDate > new Date()) {
+          if (count === 0 && ovulationDate > today) {
             setNextOvulationDay(new Date(ovulationDate));
           }
         }
@@ -351,7 +383,7 @@ export default function Home() {
         nextPeriod.setDate(nextPeriod.getDate() + cycleLength);
         
         // 保存下次经期开始日期（如果在将来）
-        if (count === 0 && nextPeriod > new Date()) {
+        if (count === 0 && nextPeriod > today) {
           setNextPeriodStart(new Date(nextPeriod));
         }
         
@@ -364,26 +396,39 @@ export default function Home() {
   };
 
   const prevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
-    } else {
-      setCurrentMonth(currentMonth - 1);
+    const newDate = new Date(currentViewMonth);
+    newDate.setMonth(newDate.getMonth() - 1);
+    
+    // 检查年份下限
+    if (newDate.getFullYear() < 1950) {
+      // 使用模态框替代 alert
+      setErrorMessage(language === 'zh' ? 
+        '已达到最早年份限制 (1950)' : 
+        'Reached the earliest year limit (1950)');
+      return;
     }
+    
+    setCurrentViewMonth(newDate);
   };
 
   const nextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
-    } else {
-      setCurrentMonth(currentMonth + 1);
+    const newDate = new Date(currentViewMonth);
+    newDate.setMonth(newDate.getMonth() + 1);
+    
+    // 检查年份上限
+    if (newDate.getFullYear() > 3000) {
+      // 使用模态框替代 alert
+      setErrorMessage(language === 'zh' ? 
+        '已达到最晚年份限制 (3000)' : 
+        'Reached the latest year limit (3000)');
+      return;
     }
+    
+    setCurrentViewMonth(newDate);
   };
 
   const resetToCurrentMonth = () => {
-    setCurrentMonth(new Date().getMonth());
-    setCurrentYear(new Date().getFullYear());
+    setCurrentViewMonth(new Date());
   };
 
   const formatDate = (date: Date | null) => {
@@ -402,7 +447,33 @@ export default function Home() {
 
   // 处理经期日期变化
   const handlePeriodDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // 仅更新日期值，不进行验证
     setLastPeriodDate(e.target.value);
+  };
+
+  // 处理日期输入完成后的验证
+  const handlePeriodDateBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const dateStr = e.target.value;
+    
+    // 验证日期是否在有效范围内（1950-3000年）
+    if (dateStr) {
+      const date = new Date(dateStr);
+      const year = date.getFullYear();
+      
+      if (year < 1950 || year > 3000) {
+        // 使用模态框替代 alert
+        setErrorMessage(language === 'zh' ? 
+          '请输入1950年至3000年之间的日期' : 
+          'Please enter a date between 1950 and 3000');
+        // 清空无效日期
+        setLastPeriodDate('');
+        // 清空预测结果
+        setNextPeriodStart(null);
+        setNextOvulationDay(null);
+        // 从localStorage移除无效数据
+        localStorage.removeItem('periodData');
+      }
+    }
   };
 
   // 处理周期长度变化
@@ -419,6 +490,25 @@ export default function Home() {
   const handleCalculate = () => {
     if (!lastPeriodDate) return;
 
+    // 验证日期是否在有效范围内（1950-3000年）
+    const date = new Date(lastPeriodDate);
+    const year = date.getFullYear();
+    
+    if (year < 1950 || year > 3000) {
+      // 使用模态框替代 alert
+      setErrorMessage(language === 'zh' ? 
+        '请输入1950年至3000年之间的日期' : 
+        'Please enter a date between 1950 and 3000');
+      // 清空无效日期
+      setLastPeriodDate('');
+      // 清空预测结果
+      setNextPeriodStart(null);
+      setNextOvulationDay(null);
+      // 从localStorage移除无效数据
+      localStorage.removeItem('periodData');
+      return;
+    }
+
     // 计算下次经期日期
     const nextPeriodDate = new Date(lastPeriodDate);
     nextPeriodDate.setDate(nextPeriodDate.getDate() + cycleLength);
@@ -433,6 +523,29 @@ export default function Home() {
 
     const ovulationEndDate = new Date(ovulationDate);
     ovulationEndDate.setDate(ovulationEndDate.getDate() + 4);
+    
+    // 计算未来12个周期的日期
+    const futureCycles = [];
+    let currentPeriodStart = new Date(lastPeriodDate);
+    
+    for (let i = 0; i < 12; i++) {
+      // 如果不是第一个周期，计算下一个周期开始日期
+      if (i > 0) {
+        currentPeriodStart = new Date(currentPeriodStart);
+        currentPeriodStart.setDate(currentPeriodStart.getDate() + cycleLength);
+      }
+      
+      // 当前周期的排卵日
+      const cycleOvulationDate = new Date(currentPeriodStart);
+      cycleOvulationDate.setDate(cycleOvulationDate.getDate() + cycleLength - 14);
+      
+      // 添加到未来周期数组
+      futureCycles.push({
+        periodStart: new Date(currentPeriodStart),
+        ovulationDate: new Date(cycleOvulationDate),
+        cycleNumber: i + 1
+      });
+    }
 
     // 保存经期数据到localStorage
     const periodData = {
@@ -441,7 +554,12 @@ export default function Home() {
       periodLength,
       ovulationDay: ovulationDate.getDate(),
       ovulationStart: ovulationStartDate.getDate(),
-      ovulationEnd: ovulationEndDate.getDate()
+      ovulationEnd: ovulationEndDate.getDate(),
+      futureCycles: futureCycles.map(cycle => ({
+        periodStart: formatDate(cycle.periodStart),
+        ovulationDate: formatDate(cycle.ovulationDate),
+        cycleNumber: cycle.cycleNumber
+      }))
     };
     localStorage.setItem('periodData', JSON.stringify(periodData));
 
@@ -450,8 +568,39 @@ export default function Home() {
     setShowOvulation(true);
   };
 
+  // 错误模态框组件
+  const ErrorModal = ({ message, onClose }: { message: string; onClose: () => void }) => {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 mx-4">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">{message}</h3>
+            <button
+              onClick={onClose}
+              className="bg-pink-500 hover:bg-pink-600 text-white py-2 px-4 rounded-lg"
+            >
+              {language === 'zh' ? '确定' : 'OK'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-pink-50 to-white relative">
+      {/* 添加错误模态框 */}
+      {errorMessage && (
+        <ErrorModal 
+          message={errorMessage} 
+          onClose={() => setErrorMessage(null)} 
+        />
+      )}
       <div className="absolute inset-0 z-0">
         <Waves
           lineColor="rgba(255, 192, 203, 0.35)"
@@ -467,7 +616,7 @@ export default function Home() {
           yGap={36}
         />
       </div>
-      <div className="container mx-auto px-4 py-8 relative z-10">
+      <div className="container mx-auto px-4 py-8 relative z-10 w-full overflow-y-auto">
         <div className="max-w-5xl mx-auto w-full">
           <div className="text-center mb-8">
             <div className="flex justify-end mb-4">
@@ -506,12 +655,20 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              <h2 className="text-2xl font-semibold">
-                {months[currentMonth]} {currentYear}
-                <button onClick={resetToCurrentMonth} className="ml-2 text-sm bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-600">
+              <div className="flex items-center">
+                <h2 className="text-2xl font-semibold">
+                  {months[currentViewMonth.getMonth()]} {currentViewMonth.getFullYear()}
+                </h2>
+                <button 
+                  onClick={resetToCurrentMonth} 
+                  className="ml-2 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-600 text-sm flex items-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
                   {t.today}
                 </button>
-              </h2>
+              </div>
               <button onClick={nextMonth} className="text-pink-600 hover:text-pink-800">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -641,6 +798,7 @@ export default function Home() {
                   className="input-field" 
                   value={lastPeriodDate}
                   onChange={handlePeriodDateChange}
+                  onBlur={handlePeriodDateBlur}
                 />
               </div>
               

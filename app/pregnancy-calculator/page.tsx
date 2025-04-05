@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useMemo, useEffect } from 'react';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage, useCalendar } from '../context/LanguageContext';
 import Navbar from '../../components/Navbar';
 import { Waves } from '../../components/ui/waves-background';
 
@@ -109,9 +109,11 @@ const formatDate = (date: Date): string => {
 };
 
 export default function PregnancyCalendar() {
-  const { language } = useLanguage();
-  const [lastPeriodDate, setLastPeriodDate] = useState<string>('');
-  const [currentMonth, setCurrentMonth] = useState(() => new Date());
+  const { language, setLanguage } = useLanguage();
+  const { currentViewMonth, setCurrentViewMonth } = useCalendar();
+  const [cycleLength, setCycleLength] = useState(28);
+  const [periodLength, setPeriodLength] = useState(5);
+  const [lastPeriodDate, setLastPeriodDate] = useState('');
   const [pregnancyInfo, setPregnancyInfo] = useState<{
     weeks: number;
     days: number;
@@ -123,6 +125,7 @@ export default function PregnancyCalendar() {
   const [selectedEvent, setSelectedEvent] = useState<EventPopup | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [expandedArticles, setExpandedArticles] = useState<Record<string, boolean>>({});
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // 从localStorage加载数据
   useEffect(() => {
@@ -130,19 +133,32 @@ export default function PregnancyCalendar() {
     if (storedPregnancyData) {
       try {
         const data = JSON.parse(storedPregnancyData);
-        setLastPeriodDate(data.lastPeriodDate);
-        if (data.pregnancyInfo) {
-          setPregnancyInfo({
-            ...data.pregnancyInfo,
-            milestones: data.pregnancyInfo.milestones.map((milestone: any) => ({
-              ...milestone,
-              date: new Date(milestone.date)
-            }))
-          });
+        
+        // 添加日期验证逻辑
+        if (data.lastPeriodDate) {
+          const dateYear = new Date(data.lastPeriodDate).getFullYear();
+          if (dateYear >= 1950 && dateYear <= 3000) {
+            setLastPeriodDate(data.lastPeriodDate);
+            if (data.pregnancyInfo) {
+              setPregnancyInfo({
+                ...data.pregnancyInfo,
+                milestones: data.pregnancyInfo.milestones.map((milestone: any) => ({
+                  ...milestone,
+                  date: new Date(milestone.date)
+                }))
+              });
+            }
+          } else {
+            // 清除无效数据
+            localStorage.removeItem('pregnancyData');
+            setLastPeriodDate('');
+            setPregnancyInfo(null);
+          }
         }
         setExpandedArticles(data.expandedArticles || {});
       } catch (error) {
         console.error('Error loading pregnancy data:', error);
+        localStorage.removeItem('pregnancyData');
       }
     }
 
@@ -151,7 +167,20 @@ export default function PregnancyCalendar() {
     if (storedPeriodData && !storedPregnancyData) {
       try {
         const data = JSON.parse(storedPeriodData);
-        setLastPeriodDate(data.lastPeriodDate);
+        
+        // 添加日期验证逻辑
+        if (data.lastPeriodDate) {
+          const dateYear = new Date(data.lastPeriodDate).getFullYear();
+          if (dateYear >= 1950 && dateYear <= 3000) {
+            setLastPeriodDate(data.lastPeriodDate);
+            
+            // 如果存在未来周期数据，可以在这里使用
+            if (data.futureCycles && data.futureCycles.length > 0) {
+              console.log('Found future cycles data:', data.futureCycles.length);
+              // 未来可以基于这些数据增强妊娠计算器的功能
+            }
+          }
+        }
       } catch (error) {
         console.error('Error loading period data:', error);
       }
@@ -550,6 +579,21 @@ Special Scenarios
   const calculatePregnancy = () => {
     if (!lastPeriodDate) return;
 
+    // 添加日期验证逻辑
+    const lastPeriodYear = new Date(lastPeriodDate).getFullYear();
+    if (lastPeriodYear < 1950 || lastPeriodYear > 3000) {
+      setErrorMessage(language === 'zh' ? 
+        '请输入1950年至3000年之间的日期' : 
+        'Please enter a date between 1950 and 3000');
+      // 清空无效日期
+      setLastPeriodDate('');
+      // 清空预测结果
+      setPregnancyInfo(null);
+      // 从localStorage移除无效数据
+      localStorage.removeItem('pregnancyData');
+      return;
+    }
+
     // 创建日期时使用本地时间
     const lastPeriod = new Date(lastPeriodDate);
     const today = new Date();
@@ -718,16 +762,43 @@ Special Scenarios
   };
 
   const calendarDays = useMemo(() => {
-    if (!pregnancyInfo) return generateCalendarDays(currentMonth.getFullYear(), currentMonth.getMonth());
-    return generateCalendarDays(currentMonth.getFullYear(), currentMonth.getMonth(), pregnancyInfo.milestones);
-  }, [currentMonth, pregnancyInfo]);
+    if (!pregnancyInfo) return generateCalendarDays(currentViewMonth.getFullYear(), currentViewMonth.getMonth());
+    return generateCalendarDays(currentViewMonth.getFullYear(), currentViewMonth.getMonth(), pregnancyInfo.milestones);
+  }, [currentViewMonth, pregnancyInfo]);
 
   const prevMonth = () => {
-    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1));
+    const newDate = new Date(currentViewMonth);
+    newDate.setMonth(newDate.getMonth() - 1);
+    
+    // 检查年份下限
+    if (newDate.getFullYear() < 1950) {
+      setErrorMessage(language === 'zh' ? 
+        '已达到最早年份限制 (1950)' : 
+        'Reached the earliest year limit (1950)');
+      return;
+    }
+    
+    setCurrentViewMonth(newDate);
   };
 
   const nextMonth = () => {
-    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1));
+    const newDate = new Date(currentViewMonth);
+    newDate.setMonth(newDate.getMonth() + 1);
+    
+    // 检查年份上限
+    if (newDate.getFullYear() > 3000) {
+      setErrorMessage(language === 'zh' ? 
+        '已达到最晚年份限制 (3000)' : 
+        'Reached the latest year limit (3000)');
+      return;
+    }
+    
+    setCurrentViewMonth(newDate);
+  };
+
+  // 添加回到今天按钮的处理函数
+  const resetToCurrentMonth = () => {
+    setCurrentViewMonth(new Date());
   };
 
   // 当语言改变时重新计算
@@ -736,13 +807,13 @@ Special Scenarios
       // 保存当前数据
       const currentData = {
         lastPeriodDate,
-        currentMonth
+        currentViewMonth
       };
       
       // 延迟执行以确保语言状态已更新
       setTimeout(() => {
         setLastPeriodDate(currentData.lastPeriodDate);
-        setCurrentMonth(currentData.currentMonth);
+        setCurrentViewMonth(currentData.currentViewMonth);
         calculatePregnancy();
       }, 0);
     }
@@ -884,8 +955,62 @@ Special Scenarios
     }
   };
 
+  // 错误模态框组件
+  const ErrorModal = ({ message, onClose }: { message: string; onClose: () => void }) => {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 mx-4">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">{message}</h3>
+            <button
+              onClick={onClose}
+              className="bg-pink-500 hover:bg-pink-600 text-white py-2 px-4 rounded-lg"
+            >
+              {language === 'zh' ? '确定' : 'OK'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // 修改处理经期日期失去焦点的验证
+  const handlePeriodDateBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const dateStr = e.target.value;
+    
+    // 验证日期是否在有效范围内（1950-3000年）
+    if (dateStr) {
+      const date = new Date(dateStr);
+      const year = date.getFullYear();
+      
+      if (year < 1950 || year > 3000) {
+        // 替换 alert 为自定义错误提示
+        setErrorMessage(language === 'zh' ? 
+          '请输入1950年至3000年之间的日期' : 
+          'Please enter a date between 1950 and 3000');
+        // 清空无效日期
+        setLastPeriodDate('');
+        // 清空预测结果
+        setPregnancyInfo(null);
+        // 从localStorage移除无效数据
+        localStorage.removeItem('pregnancyData');
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-pink-50 to-white relative">
+      {errorMessage && (
+        <ErrorModal 
+          message={errorMessage} 
+          onClose={() => setErrorMessage(null)} 
+        />
+      )}
       <div className="absolute inset-0 z-0">
         <Waves
           lineColor="rgba(255, 192, 203, 0.35)"
@@ -901,7 +1026,7 @@ Special Scenarios
           yGap={36}
         />
       </div>
-      <div className="container mx-auto px-4 py-8 relative z-10">
+      <div className="container mx-auto px-4 py-8 relative z-10 w-full overflow-y-auto">
         <div className="max-w-5xl mx-auto w-full">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-4 text-pink-600">{t.title}</h1>
@@ -919,7 +1044,11 @@ Special Scenarios
                   type="date" 
                   className="input-field" 
                   value={lastPeriodDate}
-                  onChange={(e) => setLastPeriodDate(e.target.value)}
+                  onChange={(e) => {
+                    // 仅更新日期值，不进行验证
+                    setLastPeriodDate(e.target.value);
+                  }}
+                  onBlur={handlePeriodDateBlur}
                 />
               </div>
               <div className="flex items-end">
@@ -1011,12 +1140,31 @@ Special Scenarios
 
               {/* 日历标题和导航 */}
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-pink-600">
-                  {currentMonth.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', { 
-                    year: 'numeric', 
-                    month: 'long'
-                  })}
-                </h2>
+                <button onClick={prevMonth} className="p-2 hover:bg-pink-50 rounded-full transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                
+                <div className="flex items-center">
+                  <h2 className="text-xl font-semibold text-pink-600">
+                    {currentViewMonth.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', { 
+                      year: 'numeric', 
+                      month: 'long'
+                    })}
+                  </h2>
+                  {/* 添加回到今天按钮 */}
+                  <button 
+                    onClick={resetToCurrentMonth} 
+                    className="ml-2 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-600 text-sm flex items-center"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {language === 'zh' ? '今天' : 'Today'}
+                  </button>
+                </div>
+                
                 <div className="flex items-center gap-4">
                   {/* 图例 */}
                   <div className="flex items-center gap-2 text-xs">
@@ -1037,20 +1185,12 @@ Special Scenarios
                       <span>{t.milestones.warning}</span>
                     </span>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={prevMonth}
-                      className="p-2 hover:bg-gray-100 rounded-full"
-                    >
-                      ←
-                    </button>
-                    <button
-                      onClick={nextMonth}
-                      className="p-2 hover:bg-gray-100 rounded-full"
-                    >
-                      →
-                    </button>
-                  </div>
+                  
+                  <button onClick={nextMonth} className="p-2 hover:bg-pink-50 rounded-full transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
                 </div>
               </div>
 

@@ -344,20 +344,25 @@ export function Waves({
   return (
     <div
       ref={containerRef}
+      className={className}
       style={{
         backgroundColor,
+        position: "absolute",
+        inset: 0,
+        overflow: "hidden",
+        pointerEvents: "none",
+        touchAction: "none",
+        zIndex: 0,
       }}
-      className="absolute top-0 left-0 w-full h-full overflow-hidden"
     >
-      <div
-        className="absolute top-0 left-0 rounded-full w-2 h-2 bg-foreground/10"
+      <canvas
+        ref={canvasRef}
         style={{
-          transform:
-            "translate3d(calc(var(--x) - 50%), calc(var(--y) - 50%), 0)",
-          willChange: "transform",
+          display: "block",
+          width: "100%",
+          height: "100%",
         }}
       />
-      <canvas ref={canvasRef} className="block w-full h-full" />
     </div>
   )
 } 
