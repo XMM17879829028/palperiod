@@ -1,24 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
   xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
-  http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+  http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd
+  http://www.google.com/schemas/sitemap-image/1.1
+  http://www.google.com/schemas/sitemap-image/1.1/sitemap-image.xsd">
   <url>
     <loc>https://palperiod.com</loc>
     <lastmod>2024-03-25T00:00:00+00:00</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://palperiod.com/logo.png</image:loc>
+      <image:title>PalPeriod Logo</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://palperiod.com/pregnancy-calculator</loc>
     <lastmod>2024-03-25T00:00:00+00:00</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://palperiod.com/pregnancy-calculator.png</image:loc>
+      <image:title>Pregnancy Calculator</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://palperiod.com/sex-calculator</loc>
     <lastmod>2024-03-25T00:00:00+00:00</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://palperiod.com/sex-calculator.png</image:loc>
+      <image:title>Sex Calculator</image:title>
+    </image:image>
   </url>
 </urlset> 
