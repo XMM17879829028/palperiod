@@ -6,6 +6,7 @@ import Navbar from '../../components/Navbar';
 import Link from 'next/link';
 import { useLanguage, useCalendar } from '../context/LanguageContext';
 import { Waves } from '../../components/ui/waves-background';
+import { ErrorModal } from '@/components/ui/ErrorModal';
 
 interface SexRecord {
   date: Date;

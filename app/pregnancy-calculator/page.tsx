@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useLanguage, useCalendar } from '../context/LanguageContext';
 import Navbar from '../../components/Navbar';
 import { Waves } from '../../components/ui/waves-background';
+import { ErrorModal } from '@/components/ui/ErrorModal';
 
 interface PregnancyMilestone {
   week: number;
