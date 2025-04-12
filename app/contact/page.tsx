@@ -1,3 +1,5 @@
+"use client";
+
 import { useLanguage } from '../context/LanguageContext';
 import Navbar from '@/components/Navbar';
 import { Waves } from '@/components/ui/waves-background';

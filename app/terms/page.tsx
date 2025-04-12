@@ -1,3 +1,5 @@
+"use client";
+
 import { useLanguage } from '../context/LanguageContext';
 import Navbar from '@/components/Navbar';
 import { Waves } from '@/components/ui/waves-background';
@@ -82,8 +84,8 @@ export default function TermsPage() {
           
           <p className="mb-8 text-gray-700">{t.introduction}</p>
           
-          {t.sections.map((section, index) => (
-            <div key={index} className="mb-6">
+          {t.sections.map((section) => (
+            <div key={section.title} className="mb-6">
               <h2 className="text-xl font-semibold text-pink-600 mb-2">{section.title}</h2>
               <p className="text-gray-700">{section.content}</p>
             </div>
