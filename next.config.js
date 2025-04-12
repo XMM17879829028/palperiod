@@ -17,6 +17,29 @@ const nextConfig = {
         source: '/sitemap.xml',
         destination: '/api/sitemap',
       },
+      {
+        source: '/sex-calculator',
+        destination: '/sex-calculator/page',
+      },
+      {
+        source: '/pregnancy-calculator',
+        destination: '/pregnancy-calculator/page',
+      }
+    ]
+  },
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'palperiod.com',
+          },
+        ],
+        destination: 'https://www.palperiod.com/:path*',
+        permanent: true,
+      }
     ]
   },
 };

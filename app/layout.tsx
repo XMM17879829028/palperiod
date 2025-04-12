@@ -9,8 +9,12 @@ import { cn } from '../components/ui/utils'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.palperiod.com'),
   title: 'PalPeriod',
-  description: 'Period Calculator, Pregnancy Calculator and Sexual Behavior Calendar',
+  description: 'Track your menstrual cycle and health',
+  alternates: {
+    canonical: '/',
+  },
 }
 
 export default function RootLayout({
